@@ -14,10 +14,9 @@ function CreateExtendedPlayer(player, accounts, inventory, job, loadout, name, l
 	self.identifier = self.player.get('identifier')
 
 	self.setMoney = function(money)
-		money = ESX.Math.Round(money)
 
 		if money >= 0 then
-			self.setInventoryItem("cash", money)
+			self.addInventoryItem("cash", money)
 			self.player.setMoney(money)
 		else
 			print(('es_extended: %s attempted exploiting! (reason: player tried setting -1 cash balance)'):format(self.identifier))
@@ -29,8 +28,12 @@ function CreateExtendedPlayer(player, accounts, inventory, job, loadout, name, l
 		return self.getInventoryItem('cash').count
 	end
 
+	self.getBlackMoney = function()
+		--return self.player.get('money')
+		return self.getInventoryItem('blackmoney').count
+	end
+
 	self.setBankBalance = function(money)
-		money = ESX.Math.Round(money)
 
 		if money >= 0 then
 			self.player.setBankBalance(money)
@@ -63,7 +66,6 @@ function CreateExtendedPlayer(player, accounts, inventory, job, loadout, name, l
 	end
 
 	self.addMoney = function(money)
-		money = ESX.Math.Round(money)
 
 		if money >= 0 then
 			self.addInventoryItem("cash", money)
@@ -73,19 +75,72 @@ function CreateExtendedPlayer(player, accounts, inventory, job, loadout, name, l
 		end
 	end
 
-	self.removeMoney = function(money)
-		money = ESX.Math.Round(money)
+	self.addBlackMoney = function(money)
 
 		if money >= 0 then
-			self.player.removeMoney(money)
-			self.removeInventoryItem("cash", money)
+			self.addInventoryItem("blackmoney", money)
+			self.player.addBlackMoney(money)
 		else
-			print(('es_extended: %s attempted exploiting! (reason: player tried removing -1 cash balance)'):format(self.identifier))
+			print(('es_extended: %s attempted exploiting! (reason: player tried adding -1 cash balance)'):format(self.identifier))
 		end
 	end
 
+	-- self.removeMoney = function(money)
+	-- 	money = ESX.Math.Round(money)
+
+	-- 	if money >= 0 then
+	-- 		self.removeInventoryItem("cash", money)
+	-- 		self.player.removeMoney(money)
+	-- 	else
+	-- 		print(('es_extended: %s attempted exploiting! (reason: player tried removing -1 cash balance)'):format(self.identifier))
+	-- 	end
+	-- end
+
+	self.removeMoney = function(money)
+
+        if money >= 0 then
+            self.player.removeMoney(money)
+
+            local name = 'cash'
+            local count = money
+            local item = self.getInventoryItem(name)
+
+            if item then
+                local newCount = item.count - count
+
+                if newCount >= 0 then
+                    item.count = newCount
+
+                TriggerEvent('esx:onRemoveInventoryItem', self.source, item, count)
+                TriggerClientEvent('esx:onRemoveInventoryItem', self.source, item, count)
+                end
+            end     
+        end
+	end
+	
+	self.removeBlackMoney = function(money)
+
+        if money >= 0 then
+            self.player.removeBlackMoney(money)
+
+            local name = 'blackmoney'
+            local count = money
+            local item = self.getInventoryItem(name)
+
+            if item then
+                local newCount = item.count - count
+
+                if newCount >= 0 then
+                    item.count = newCount
+
+                TriggerEvent('esx:onRemoveInventoryItem', self.source, item, count)
+                TriggerClientEvent('esx:onRemoveInventoryItem', self.source, item, count)
+                end
+            end     
+        end
+    end
+
 	self.addBank = function(money)
-		money = ESX.Math.Round(money)
 
 		if money >= 0 then
 			self.player.addBank(money)
@@ -95,7 +150,6 @@ function CreateExtendedPlayer(player, accounts, inventory, job, loadout, name, l
 	end
 
 	self.removeBank = function(money)
-		money = ESX.Math.Round(money)
 
 		if money >= 0 then
 			self.player.removeBank(money)
@@ -268,7 +322,7 @@ function CreateExtendedPlayer(player, accounts, inventory, job, loadout, name, l
 
 		local account   = self.getAccount(acc)
 		local prevMoney = account.money
-		local newMoney  = ESX.Math.Round(money)
+		local newMoney  = money
 
 		account.money = newMoney
 
@@ -286,7 +340,7 @@ function CreateExtendedPlayer(player, accounts, inventory, job, loadout, name, l
 		end
 
 		local account  = self.getAccount(acc)
-		local newMoney = account.money + ESX.Math.Round(money)
+		local newMoney = account.money + money
 
 		account.money = newMoney
 
@@ -304,7 +358,7 @@ function CreateExtendedPlayer(player, accounts, inventory, job, loadout, name, l
 		end
 
 		local account  = self.getAccount(acc)
-		local newMoney = account.money - ESX.Math.Round(money)
+		local newMoney = account.money - money
 
 		account.money = newMoney
 
@@ -323,21 +377,14 @@ function CreateExtendedPlayer(player, accounts, inventory, job, loadout, name, l
 		end
 	end
 
-    self.addInventoryItem = function(name, count)
-		local oyuncu2 = ESX.GetPlayerFromIdentifier(self.identifier)
-		if oyuncu2.canCarryItem(name, count) then
-			local item     = self.getInventoryItem(name)
-			local newCount = item.count + count
-			item.count     = newCount
+	self.addInventoryItem = function(name, count)
+		local item     = self.getInventoryItem(name)
+		local newCount = item.count + count
+		item.count     = newCount
 
-			if name == 'cash' then
-			end
-			TriggerEvent('esx:onAddInventoryItem', self.source, item, count)
-			TriggerClientEvent('esx:AddInventoryItem', self.source, item, count)
-		else
-			TriggerClientEvent('mythic_notify:client:SendAlert', self.source, { type = 'inform', text = 'Bunu taşıyamam çok ağır', lenght = 4000 })
-		end
-    end
+		TriggerEvent('esx:onAddInventoryItem', self.source, item, count)
+		TriggerClientEvent('esx:addInventoryItem', self.source, item, count)
+	end
 
 	self.removeInventoryItem = function(name, count)
 		local item     = self.getInventoryItem(name)
@@ -352,18 +399,13 @@ function CreateExtendedPlayer(player, accounts, inventory, job, loadout, name, l
 		local item     = self.getInventoryItem(name)
 		local oldCount = item.count
 		item.count     = count
-		local oyuncu2 = ESX.GetPlayerFromIdentifier(self.identifier)
 
 		if oldCount > item.count  then
 			TriggerEvent('esx:onRemoveInventoryItem', self.source, item, oldCount - item.count)
 			TriggerClientEvent('esx:removeInventoryItem', self.source, item, oldCount - item.count)
 		else
-			if oyuncu2.canCarryItem(name, count) then
-				TriggerEvent('esx:onAddInventoryItem', self.source, item, item.count - oldCount)
-				TriggerClientEvent('esx:addInventoryItem', self.source, item, item.count - oldCount)
-			else
-				TriggerClientEvent('mythic_notify:client:SendAlert', self.source, { type = 'inform', text = 'Bunu taşıyamam çok ağır', lenght = 4000 })
-			end
+			TriggerEvent('esx:onAddInventoryItem', self.source, item, item.count - oldCount)
+			TriggerClientEvent('esx:addInventoryItem', self.source, item, item.count - oldCount)
 		end
 	end
 
